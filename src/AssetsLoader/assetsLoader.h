@@ -10,6 +10,8 @@
 
 #include "../Common/objects.h"
 #include "../Model/model.h"
+#include "GLFW/glfw3.h"
+
 
 typedef struct {
     GLuint vao, vbo, ebo, count;
@@ -33,6 +35,7 @@ Model* g_models;
 Object* g_objects;
 GameObject* g_gameObjects;
 GLuint* g_shaders;
+GLuint g_cubeShader, gbufferShader, gbufferRenderShader, fboShader ;
 
 Material* g_materials;
 GLuint g_materialsBuffer;
@@ -41,8 +44,13 @@ GameObject* g_lightRenderer;
 Light* g_lights;
 GLuint g_lightsBuffer;
 
+GLuint gbuffer, gbuffer_tex[3];
+GLuint fbo, fbo_texture, fbo_depth;
+
+extern GLFWwindow* g_window;
+// TODO: this is bad so refactor the defines. Not flexable
 #define MODEL_COUNT     1
-#define SHADER_COUNT    3
+#define SHADER_COUNT    6
 #define MATERIAL_COUNT 23
 #define LIGHT_COUNT 2 
 #define OBJECT_COUNT    4 
@@ -62,13 +70,17 @@ enum ModelType {
 enum MetarialType {
     BRONZE
 };
+// <----- todo end
 
+
+void loadFramebuffers();
 void shadersSetup();
 void gameObjectsSetup();
 void loadAssets();
 void materialSetup();
 void loadMaterialValues();
 void parseMaterials(Material* material);
+void checkFramebuffer(GLenum status);
 
 void cleanGameObjects();
 void cleanAssets();
@@ -77,31 +89,137 @@ void cleanShaders();
 void deleteBuffers();
 
 GLuint g_textures[3];
-void shadersSetup() {
+enum Shaders{
+    MATERIAL_SHADER = 0,
+    MODEL_SHADER = 1,
+    LIGHT_SOURCE_SHADER = 2,
+    GBUFFER_SHADER = 3,
+    GBUFFER_VIS_SHADER = 4,
+    GBUFFER_RENDER_SHADER = 5,
+};
 
+GLuint debug_texture;
+void shadersSetup() {
     g_shaders = malloc(sizeof(GLuint) * SHADER_COUNT);
     char pathes[2][64] = {
-        "Shaders/Material.vert",
-        "Shaders/Material.frag",
+        "NULL",
+        "NULL",
     };
-    g_shaders[0] = createProgram(pathes, 2);
+
+    strncpy(pathes[0], "Shaders/Material.vert", 64);
+    strncpy(pathes[1], "Shaders/Material.frag", 64);
+    g_shaders[MATERIAL_SHADER] = createProgram(pathes, 2);
 
     strncpy(pathes[0], "Shaders/Model.vert", 64);
     strncpy(pathes[1], "Shaders/Model.frag", 64);
-    g_shaders[1] = createProgram(pathes, 2);
+    g_shaders[MODEL_SHADER] = createProgram(pathes, 2);
 
     strncpy(pathes[0], "Shaders/LightSource.vert", 64);
     strncpy(pathes[1], "Shaders/LightSource.frag", 64);
-    g_shaders[2] = createProgram(pathes, 2);
+    g_shaders[LIGHT_SOURCE_SHADER] = createProgram(pathes, 2);
 
+    strncpy(pathes[0], "Shaders/GBuffer.vert", 64);
+    strncpy(pathes[1], "Shaders/GBuffer.frag", 64);
+    g_shaders[GBUFFER_SHADER] = createProgram(pathes, 2);
 
+    strncpy(pathes[0], "Shaders/GBufferRender.vert", 64);
+    strncpy(pathes[1], "Shaders/GBufferShow.frag", 64);
+    g_shaders[GBUFFER_VIS_SHADER] = createProgram(pathes, 2);
+
+    strncpy(pathes[0], "Shaders/GBufferRender.vert", 64);
+    strncpy(pathes[1], "Shaders/GBufferRender.frag", 64);
+    g_shaders[GBUFFER_RENDER_SHADER] = createProgram(pathes, 2);
+
+    strncpy(pathes[0], "Shaders/Cube.vert", 64);
+    strncpy(pathes[1], "Shaders/Cube.frag", 64);
+    g_cubeShader = createProgram(pathes, 2);
+
+    // debug
+    strncpy(pathes[0], "Shaders/Debug/GBuffer.vert", 64);
+    strncpy(pathes[1], "Shaders/Debug/GBuffer.frag", 64);
+    gbufferShader = createProgram(pathes, 2);
+    
+    strncpy(pathes[0], "Shaders/Debug/GBufferRender.vert", 64);
+    strncpy(pathes[1], "Shaders/Debug/GBufferShow.frag", 64);
+    gbufferRenderShader = createProgram(pathes, 2);
+
+    strncpy(pathes[0], "Shaders/GBufferRender.vert", 64);
+    strncpy(pathes[1], "Shaders/FramebufferShow.frag", 64);
+    fboShader = createProgram(pathes, 2);
+
+    // textures
     g_textures[0] = loadTexture("Assets/Backpack/diffuse.jpg");
     g_textures[1] = loadTexture("Assets/Backpack/specular.jpg");
-    g_textures[2] = loadTexture("Assets/Backpack/normal.png");
+    debug_texture = loadTexture("Assets/uv_grid_opengl.jpg");
 }
 
-void gameObjectsSetup() {
+void loadFramebuffers() {
+    int width, height;
+    GLuint framebufferStatus;
+    glfwGetWindowSize(g_window, &width, &height);
+    // fbo 
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
+    // color buffer
+    glGenTextures(1, &fbo_texture);
+    glBindTexture(GL_TEXTURE_2D, fbo_texture);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1920, 1080);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // depth buffer
+    glGenTextures(1, &fbo_depth);
+    glBindTexture(GL_TEXTURE_2D, fbo_depth);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, 1920, 1080);
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, fbo_texture, 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, fbo_depth, 0);
+
+    static const GLenum draw_buffer[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(1, draw_buffer);
+
+    framebufferStatus = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+    if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE) {
+        printf("fbo status:\t");
+        checkFramebuffer(framebufferStatus);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+    // G buffer
+    glGenFramebuffers(1, &gbuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, gbuffer);
+
+    glGenTextures(3, gbuffer_tex);
+    glBindTexture(GL_TEXTURE_2D, gbuffer_tex[0]);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32UI, 1280, 720);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    
+    glBindTexture(GL_TEXTURE_2D, gbuffer_tex[1]);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1280, 720);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glBindTexture(GL_TEXTURE_2D, gbuffer_tex[2]);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, 1280, 720);
+
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gbuffer_tex[0], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gbuffer_tex[1], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gbuffer_tex[2], 0);
+
+    glDrawBuffers(2, draw_buffer);
+
+    framebufferStatus = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+    if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE) {
+        printf("gbuffer status:\t");
+        checkFramebuffer(framebufferStatus);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+ }
+
+void gameObjectsSetup() {
     g_gameObjects = malloc(sizeof(GameObject) * GAME_OBJECT_COUNT);
     if (!g_gameObjects) {
         fprintf(stderr, "ERROR: coudn't locate memory for gameObjects\n");
@@ -110,7 +228,7 @@ void gameObjectsSetup() {
     int i = 0;
     GameObject* gameObject = &g_gameObjects[i];
     gameObject->type = BACKPACK;
-    gameObject->shaderProgram = g_shaders[1];
+    gameObject->shaderProgram = g_shaders[0];
     gameObject->position[0] = 0;
     gameObject->position[1] = 0;
     gameObject->position[2] = -5;
@@ -147,8 +265,6 @@ void gameObjectsSetup() {
 void loadAssets() {
     g_models = malloc(sizeof(Model) * MODEL_COUNT);
     loadModel(&g_models[0], "Assets/Backpack/backpack.obj", "Assets/Backpack/");
-    //loadModel(&g_models[1], "Assets/stanford_dragon_pbr/scene.gltf", "Assets/stanford_dragon_pbr/");
-
     // load objects
     objectsInit();
     g_objects = malloc(sizeof(Object) * OBJECT_COUNT);
@@ -174,7 +290,6 @@ void loadAssets() {
     g_objects[3].vbo = skyboxVBO;
     g_objects[3].ebo = 0;
     g_objects[3].count = 36;
-
 }
 
 void materialSetup() {
@@ -262,6 +377,33 @@ void lightsSetup() {
     glGenBuffers(1, &g_lightsBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_lightsBuffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Light) * LIGHT_COUNT, g_lights, GL_STATIC_DRAW);
+}
+void checkFramebuffer(GLenum status) {
+    switch (status) {
+        case GL_FRAMEBUFFER_UNDEFINED:
+            printf("Framebuffer is UNDEFINED!!!!\n");
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
+            printf("Framebuffer has INCOMPLETE ATTACHMENT!!!!\n");
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
+            printf("Framebuffer has INCOMPLETE DRAW BUFFER!!!!\n");
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:
+            printf("Framebuffer has INCOMPLETE LAYER TARGETS!!!!\n");
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
+            printf("Framebuffer has MISSING ATTACHMENT!!!!\n");
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:
+            printf("Framebuffer has INCOMPLETE MULTISAMPLE!!!!\n");
+            break;
+        case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
+            printf("Framebuffer has incomplete READ BUFFER!!!!\n");
+            break;
+        default:
+            break;
+    }
 }
 void cleanGameObjects() {
     free(g_gameObjects);

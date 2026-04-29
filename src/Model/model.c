@@ -235,11 +235,11 @@ void drawMesh(Mesh* mesh, GLuint shader) {
     }
     unsigned int textureNr[2] = {1,1};
     previousCount = mesh->texturesSize;
-    */
     for (int i = 0; i < mesh->texturesSize; i++) {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, g_textures[i]);
     }
+    */
     glBindVertexArray(mesh->VAO);
     glDrawElements(GL_TRIANGLES, mesh->indicesSize, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);

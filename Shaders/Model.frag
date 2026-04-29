@@ -54,7 +54,7 @@ vec3 calculateLight(int id) {
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow( max(dot(viewDir, reflectDir), 0.0f), material.shininess);
     vec3 specular = light.specular.rgb * spec * texture(specularMap, fs_in.tex).rgb;
-    return ambient + specular;
+    return ambient + diffuse + specular;
 }
 
 void main(void) {

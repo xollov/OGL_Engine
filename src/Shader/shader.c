@@ -60,6 +60,10 @@ GLuint createProgram(const char shaders[][64], int count) {
     if (!success) {
         glGetProgramInfoLog(program, 512, NULL, infolog);
         printf("Shader link failed for program.\n%s\n", infolog);
+        for (int i = 0; i < count; i++) {
+            printf("%s\t", shaders[i]);
+        }
+        putchar('\n');
     }
 
     return program;
@@ -116,7 +120,7 @@ unsigned int loadTexture(const char* path) {
         // set texture filtering parameters
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        printf("Texture loaded: %s, texID: %d, components: %d\n", path, texture, nrchannels);
+        //printf("Texture loaded: %s, texID: %d, components: %d\n", path, texture, nrchannels);
     }
     else
 {
@@ -162,6 +166,9 @@ unsigned int loadCubemap(const char* path) {
 }
 void s_setInt(SHADER shader, char* name, int value) {
     glUniform1i(glGetUniformLocation(shader,name), value);
+}
+void s_setUInt(SHADER shader, char* name, unsigned int value){
+    glUniform1ui(glGetUniformLocation(shader,name), value);
 }
 void s_setFloat(SHADER shader, char* name, float value) {
     glUniform1f(glGetUniformLocation(shader, name), value);

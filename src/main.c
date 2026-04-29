@@ -5,17 +5,26 @@
 
 #include "AssetsLoader/assetsLoader.h"
 #include "BackEnd/backend.h"
-#include "Camera/camera.h"
-#include "Common/utility.h"
 #include "Render/render.h"
+
 
 int SCR_WIDTH = 1920;
 int SCR_HEIGHT = 1080;
 
 // Note(): setting glfw_resizable to false or floating to true makes  widnow shrink into a line
-int main() {
+int main(int argc, char** argv) {
     
+    for (int i  = 0; i < argc; i++) {
+        if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+            printf("--show-fps to show fps in console.\n");
+            return 0;
+        }
+        if (!strcmp(argv[i], "--show-fps")) {
+            options.showFPS = 1;
+        }
+    }
 
+    // EngineInit
     WindowHints hints;
     hints.majorVersion = 4;
     hints.minorVersion = 3;
@@ -28,35 +37,19 @@ int main() {
     if (!backendInit(&hints)) {
         return -1;
     }
-   
-    cameraSetup();
-    shadersSetup();
-    materialSetup();
-    lightsSetup();
-    loadAssets();
-    gameObjectsSetup();
-
-    glEnable(GL_DEPTH_TEST);
 
     while (!glfwWindowShouldClose(g_window)) {
-
-        glClear(GL_DEPTH_BUFFER_BIT);
-        glClearBufferfv(GL_COLOR, 0, colors[0]);
-
         update();
+
+        // frame begin()
         render();
+        // frame end()
 
         glfwSwapBuffers(g_window);
         glfwPollEvents();
     }
 
-    // TODO: cleanup models, objects, shader programs etc.
-    cleanGameObjects();
-    cleanAssets();
-    cleanMaterial();
-    cleanShaders();
-    deleteBuffers();
-    glfwTerminate();
+    backendCleanup();
     return 0;
 }
 

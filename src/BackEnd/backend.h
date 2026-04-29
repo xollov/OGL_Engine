@@ -10,6 +10,7 @@
 #include <malloc.h>
 #include "../Model/model.h"
 #include "../Camera/camera.h"
+#include "../AssetsLoader/assetsLoader.h"
 
 typedef struct {
     int majorVersion ;
@@ -23,21 +24,55 @@ typedef struct {
 } WindowHints;
 
 GLFWwindow* g_window; 
+GLuint vis_mode = 0;
+GLuint renderMode = 0;
 
 int backendInit(WindowHints *hints);
+int windowInit(WindowHints *hints);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void keycallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void cursorCallback(GLFWwindow* window, double xpos, double ypos);
-
+void backendCleanup();
 
 int backendInit(WindowHints *hints) {
+
+    if (!windowInit(hints)) {
+        return 0;
+    }
+   
+    cameraSetup();
+    shadersSetup();
+    materialSetup();
+    lightsSetup();
+    loadAssets();
+    loadFramebuffers();
+    gameObjectsSetup();
+
+    glEnable(GL_DEPTH_TEST);
+
+    return 1;
+}
+
+void backendCleanup() {
+    cleanGameObjects();
+    cleanAssets();
+    cleanMaterial();
+    cleanShaders();
+    deleteBuffers();
+    glfwTerminate();
+}
+
+int windowInit(WindowHints *hints) {
     
     if (!glfwInit()) {
-        return -1;
+        return 0;
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, hints->majorVersion);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, hints->minorVersion);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     g_window = glfwCreateWindow(hints->width, hints->height, (const char*) hints->title, hints->monitor, hints->share);
     if (g_window == NULL) {
@@ -74,6 +109,15 @@ void keycallback(GLFWwindow* window, int key, int scancode, int action, int mods
 
     if(key == GLFW_KEY_TAB && action == GLFW_PRESS) {
         glfwSetInputMode(window, GLFW_CURSOR, (cursor = !cursor) ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED);
+    }
+    if(key >= GLFW_KEY_0 && key <= GLFW_KEY_9 && action == GLFW_PRESS) {
+        vis_mode = key - GLFW_KEY_0;
+    }
+    if(key == GLFW_KEY_R && action == GLFW_PRESS) {
+        renderMode = 0;
+    }
+    if(key == GLFW_KEY_T && action == GLFW_PRESS) {
+        renderMode = 1;
     }
 }
 

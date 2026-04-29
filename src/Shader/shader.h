@@ -14,6 +14,7 @@ GLuint createShader(const char* path, GLenum type);
 unsigned int loadTexture(const char* path);
 unsigned int loadCubemap(const char* path);
 void s_setInt(SHADER shader, char* name, int value);
+void s_setUInt(SHADER shader, char* name, unsigned int value);
 void s_setFloat(SHADER shader, char* name, float value);
 void s_setVec4f(SHADER shader, char* name, float x, float y, float z, float w);
 void s_setVec3f(SHADER shader, char* name, float x, float y, float z);

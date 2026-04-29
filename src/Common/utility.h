@@ -2,6 +2,7 @@
 #ifndef UTILITY
 #define UTILITY
 
+#include <glad/glad.h>
 #include <cglm/cglm.h>
 enum Colors{
 RED,
