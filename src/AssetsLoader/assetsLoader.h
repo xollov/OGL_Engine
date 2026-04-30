@@ -10,6 +10,7 @@
 
 #include "../Common/objects.h"
 #include "../Model/model.h"
+#include "../Common/utility.h"
 #include "GLFW/glfw3.h"
 
 
@@ -35,7 +36,7 @@ Model* g_models;
 Object* g_objects;
 GameObject* g_gameObjects;
 GLuint* g_shaders;
-GLuint g_cubeShader, gbufferShader, gbufferRenderShader, fboShader ;
+GLuint g_cubeShader, gbufferShader, gbufferRenderShader, gbufferShowShader, fboShader ;
 
 Material* g_materials;
 GLuint g_materialsBuffer;
@@ -49,7 +50,7 @@ GLuint fbo, fbo_texture, fbo_depth;
 
 extern GLFWwindow* g_window;
 // TODO: this is bad so refactor the defines. Not flexable
-#define MODEL_COUNT     1
+#define MODEL_COUNT     2
 #define SHADER_COUNT    6
 #define MATERIAL_COUNT 23
 #define LIGHT_COUNT 2 
@@ -90,12 +91,12 @@ void deleteBuffers();
 
 GLuint g_textures[3];
 enum Shaders{
-    MATERIAL_SHADER = 0,
-    MODEL_SHADER = 1,
-    LIGHT_SOURCE_SHADER = 2,
-    GBUFFER_SHADER = 3,
-    GBUFFER_VIS_SHADER = 4,
-    GBUFFER_RENDER_SHADER = 5,
+    SHADER_MATERIAL = 0,
+    SHADER_MODEL = 1,
+    SHADER_LIGHT_SOURCE = 2,
+    SHADER_GBUFFER = 3,
+    SHADER_GBUFFER_VIS = 4,
+    SHADER_GBUFFER_RENDER = 5,
 };
 
 GLuint debug_texture;
@@ -106,32 +107,21 @@ void shadersSetup() {
         "NULL",
     };
 
-    strncpy(pathes[0], "Shaders/Material.vert", 64);
-    strncpy(pathes[1], "Shaders/Material.frag", 64);
-    g_shaders[MATERIAL_SHADER] = createProgram(pathes, 2);
+    strncpy(pathes[0], "Shaders/Material/Material.vert", 64);
+    strncpy(pathes[1], "Shaders/Material/Material.frag", 64);
+    g_shaders[SHADER_MATERIAL] = createProgram(pathes, 2);
 
-    strncpy(pathes[0], "Shaders/Model.vert", 64);
-    strncpy(pathes[1], "Shaders/Model.frag", 64);
-    g_shaders[MODEL_SHADER] = createProgram(pathes, 2);
+    strncpy(pathes[0], "Shaders/Model/Model.vert", 64);
+    strncpy(pathes[1], "Shaders/Model/Model.frag", 64);
+    g_shaders[SHADER_MODEL] = createProgram(pathes, 2);
 
-    strncpy(pathes[0], "Shaders/LightSource.vert", 64);
-    strncpy(pathes[1], "Shaders/LightSource.frag", 64);
-    g_shaders[LIGHT_SOURCE_SHADER] = createProgram(pathes, 2);
+    strncpy(pathes[0], "Shaders/LightSource/LightSource.vert", 64);
+    strncpy(pathes[1], "Shaders/LightSource/LightSource.frag", 64);
+    g_shaders[SHADER_LIGHT_SOURCE] = createProgram(pathes, 2);
 
-    strncpy(pathes[0], "Shaders/GBuffer.vert", 64);
-    strncpy(pathes[1], "Shaders/GBuffer.frag", 64);
-    g_shaders[GBUFFER_SHADER] = createProgram(pathes, 2);
 
-    strncpy(pathes[0], "Shaders/GBufferRender.vert", 64);
-    strncpy(pathes[1], "Shaders/GBufferShow.frag", 64);
-    g_shaders[GBUFFER_VIS_SHADER] = createProgram(pathes, 2);
-
-    strncpy(pathes[0], "Shaders/GBufferRender.vert", 64);
-    strncpy(pathes[1], "Shaders/GBufferRender.frag", 64);
-    g_shaders[GBUFFER_RENDER_SHADER] = createProgram(pathes, 2);
-
-    strncpy(pathes[0], "Shaders/Cube.vert", 64);
-    strncpy(pathes[1], "Shaders/Cube.frag", 64);
+    strncpy(pathes[0], "Shaders/Cube/Cube.vert", 64);
+    strncpy(pathes[1], "Shaders/Cube/Cube.frag", 64);
     g_cubeShader = createProgram(pathes, 2);
 
     // debug
@@ -141,22 +131,25 @@ void shadersSetup() {
     
     strncpy(pathes[0], "Shaders/Debug/GBufferRender.vert", 64);
     strncpy(pathes[1], "Shaders/Debug/GBufferShow.frag", 64);
+    gbufferShowShader = createProgram(pathes, 2);
+    
+    strncpy(pathes[0], "Shaders/Debug/GBufferRender.vert", 64);
+    strncpy(pathes[1], "Shaders/Debug/GBufferRender.frag", 64);
     gbufferRenderShader = createProgram(pathes, 2);
 
-    strncpy(pathes[0], "Shaders/GBufferRender.vert", 64);
+    strncpy(pathes[0], "Shaders/GBuffer/GBufferRender.vert", 64);
     strncpy(pathes[1], "Shaders/FramebufferShow.frag", 64);
     fboShader = createProgram(pathes, 2);
 
     // textures
     g_textures[0] = loadTexture("Assets/Backpack/diffuse.jpg");
     g_textures[1] = loadTexture("Assets/Backpack/specular.jpg");
+    g_textures[2] = loadTexture("Assets/stanford_dragon_pbr/textures/DefaultMaterial_baseColor.jpg");
     debug_texture = loadTexture("Assets/uv_grid_opengl.jpg");
 }
 
 void loadFramebuffers() {
-    int width, height;
     GLuint framebufferStatus;
-    glfwGetWindowSize(g_window, &width, &height);
     // fbo 
     glGenFramebuffers(1, &fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -188,22 +181,26 @@ void loadFramebuffers() {
 
 
     // G buffer
+    //GLuint width = 1920, height = 1080;
+    GLuint width = options.width, height = options.height;
     glGenFramebuffers(1, &gbuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, gbuffer);
 
     glGenTextures(3, gbuffer_tex);
     glBindTexture(GL_TEXTURE_2D, gbuffer_tex[0]);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32UI, 1280, 720);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32UI, width, height);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     
     glBindTexture(GL_TEXTURE_2D, gbuffer_tex[1]);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, 1280, 720);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, width, height);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     glBindTexture(GL_TEXTURE_2D, gbuffer_tex[2]);
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, 1280, 720);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, width, height);
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gbuffer_tex[0], 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gbuffer_tex[1], 0);
@@ -265,6 +262,7 @@ void gameObjectsSetup() {
 void loadAssets() {
     g_models = malloc(sizeof(Model) * MODEL_COUNT);
     loadModel(&g_models[0], "Assets/Backpack/backpack.obj", "Assets/Backpack/");
+    loadModel(&g_models[1], "Assets/stanford_dragon_pbr/dragon.glb", "Assets/stanford_dragon_pbr/textures/");
     // load objects
     objectsInit();
     g_objects = malloc(sizeof(Object) * OBJECT_COUNT);

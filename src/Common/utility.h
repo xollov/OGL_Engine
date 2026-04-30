@@ -4,6 +4,15 @@
 
 #include <glad/glad.h>
 #include <cglm/cglm.h>
+
+typedef struct {
+    char showFPS;
+    char render;
+    int width;
+    int height;
+} Options;
+Options options = {};
+
 enum Colors{
 RED,
 BLUE,

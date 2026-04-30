@@ -22,20 +22,21 @@ layout (binding = 1, std430) buffer light_buffer {
 
 uniform sampler2D diffuseMap;
 uniform sampler2D specularMap;
-uniform sampler2D normalMap;
 
-uniform vec3 viewPosition;
 
 in VERT {
     vec3 position;
     vec3 normal;
     vec2 tex;
 } fs_in;
-out vec4 Color;
+
+uniform vec3 viewPosition;
+uniform uint matID;
+uniform uint lightCount;
 
 vec3 calculateLight(int id) {
 
-    Material material = materials[0];
+    Material material = materials[10];
     Light light = lights[id];
     //ambient color
     vec3 ambient = light.ambient.rgb * texture(diffuseMap, fs_in.tex).rgb;
@@ -53,10 +54,12 @@ vec3 calculateLight(int id) {
     vec3 viewDir = normalize(viewPosition - fs_in.position);
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow( max(dot(viewDir, reflectDir), 0.0f), material.shininess);
-    vec3 specular = light.specular.rgb * spec * texture(specularMap, fs_in.tex).rgb;
+    //vec3 specular = light.specular.rgb * spec * texture(specularMap, fs_in.tex).rgb;
+    vec3 specular = light.specular.rgb * spec * material.shininess;
     return ambient + diffuse + specular;
 }
 
+out vec4 Color;
 void main(void) {
 
     vec3 color = vec3(0);

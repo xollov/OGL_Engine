@@ -10,11 +10,6 @@
 #include "../AssetsLoader/assetsLoader.h"
 #include "../BackEnd/backend.h"
 
-typedef struct {
-    char showFPS;
-    char render;
-} Options;
-Options options = {};
 
 void update();
 void render();
@@ -53,14 +48,14 @@ void drawGBufferScene() {
     // first pass
     glBindFramebuffer(GL_FRAMEBUFFER, gbuffer);
     glEnable(GL_DEPTH_TEST); 
-    glViewport(0,0, 1280, 720);
+    glViewport(0,0, width, height);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     GLuint program = gbufferShader;
     glUseProgram(program);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, debug_texture);
+    glBindTexture(GL_TEXTURE_2D, g_textures[0]);
 
     /* 
     // Early z for heavy fragment computation 
@@ -89,7 +84,15 @@ void drawGBufferScene() {
 
     program = gbufferRenderShader;
     glUseProgram(program);
-    glUniform1ui(glGetUniformLocation(program, "vis_mode"), vis_mode);
+
+    // uniforms
+    glUniform1ui(glGetUniformLocation(program, "lightCount"), 2);
+    glUniform1ui(glGetUniformLocation(program, "matID"), 10);
+    glUniform3fv(glGetUniformLocation(program, "viewPosition"),3, g_camera.position);
+
+    //ssbo
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, g_materialsBuffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, g_lightsBuffer);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, gbuffer_tex[0]);
@@ -105,23 +108,33 @@ void drawGBufferScene() {
 }
 
 void drawForwardScene() {
-
     const GLfloat one[] = {1, 1, 1, 1};
     int width, height;
     int id;
     glfwGetWindowSize(g_window, &width, &height);
 
-    // second pass
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0,0, width, height);
     glEnable(GL_DEPTH_TEST); 
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f); 
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f); 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    GLuint program = g_cubeShader;
+    GLuint program = g_shaders[SHADER_MODEL];
     glUseProgram(program);
+
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, debug_texture);
+    glBindTexture(GL_TEXTURE_2D, g_textures[0]);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, g_textures[1]);
+
+    // uniforms
+    glUniform1ui(glGetUniformLocation(program, "lightCount"), 2);
+    glUniform1ui(glGetUniformLocation(program, "matID"), 10);
+    glUniform3fv(glGetUniformLocation(program, "viewPosition"),3, g_camera.position);
+
+    //ssbo
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, g_materialsBuffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, g_lightsBuffer);
 
     renderModel(&g_gameObjects[0]);
     
