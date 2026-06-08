@@ -21,7 +21,8 @@ layout (binding = 1, std430) buffer light_buffer {
 };
 
 uniform vec3 viewPosition;
-uniform int matID;
+uniform uint matID;
+uniform uint lightCount;
 
 in VERT {
     vec3 position;
@@ -56,7 +57,7 @@ vec3 calculateLight(int id) {
 void main(void) {
 
     vec3 color = vec3(0);
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < lightCount; i++) {
         color += calculateLight(i);
     }
     Color = vec4(color, 1);

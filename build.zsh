@@ -14,12 +14,16 @@ SRCS=(src/main.c vendor/glad/glad.c src/Shader/shader.c src/Model/model.c src/Co
 TARGET="a.exe"
 
 # Build mode (default: release)
-MODE="${1:-release}"
+for arg in "$@"; do
+    if [[ $arg == "debug" ]]; then
+        FLAGS+=(-g)
+    fi
 
-# Add debug flag if requested
-if [[ "$MODE" == "debug" ]]; then
-  FLAGS+=(-g)
-fi
+    if [[ $arg == "benchmark" ]]; then
+        SRCS[1]='src/benchmark.c'
+        TARGET="b.exe"
+    fi
+done
 
 # Run the build
 echo "🔧 Building [$MODE]..."

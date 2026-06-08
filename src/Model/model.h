@@ -2,11 +2,9 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-#include <stdio.h>
 #include <cglm/cglm.h>
 #include <glad/glad.h>
 
-#include "../Shader/shader.h"
 
 #ifndef MODEL
 #define MODEL
@@ -42,7 +40,6 @@ typedef struct {
 } Texture;
 
 typedef struct {
-
     Vertex* vertices;
     unsigned int* indices;
     Texture* textures;
@@ -56,7 +53,7 @@ typedef struct {
 } Model;
 
 void loadModel(Model* model, const char* modelPath, const char* absolutePath);
-void drawModel(Model* model, GLuint shader);
-void drawMesh(Mesh* mesh, GLuint shader);
+void drawModel(Model* model);
+void drawMesh(Mesh* mesh);
 void deleteModel(Model* model);
 #endif // MODEL

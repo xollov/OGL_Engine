@@ -3,11 +3,9 @@
 #define BACKEND
 
 #include <cglm/cglm.h>
-#include <cglm/util.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
-#include <malloc.h>
 #include "../Model/model.h"
 #include "../Camera/camera.h"
 #include "../AssetsLoader/assetsLoader.h"
@@ -41,15 +39,15 @@ int backendInit(WindowHints *hints) {
     }
    
     cameraSetup();
-    shadersSetup();
-    materialSetup();
-    lightsSetup();
+
+    loadShaders();
     loadAssets();
+    loadGameObjects();
+    loadMaterials();
+    lightsSetup();
     loadFramebuffers();
-    gameObjectsSetup();
 
     glEnable(GL_DEPTH_TEST);
-
     return 1;
 }
 
@@ -57,6 +55,7 @@ void backendCleanup() {
     cleanGameObjects();
     cleanAssets();
     cleanMaterial();
+    cleanLights();
     cleanShaders();
     deleteBuffers();
     glfwTerminate();
@@ -81,6 +80,7 @@ int windowInit(WindowHints *hints) {
         return 0;
     }
     glfwMakeContextCurrent(g_window);
+    glfwSwapInterval( 0 );
     glfwSetFramebufferSizeCallback(g_window, framebuffer_size_callback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -114,10 +114,10 @@ void keycallback(GLFWwindow* window, int key, int scancode, int action, int mods
         vis_mode = key - GLFW_KEY_0;
     }
     if(key == GLFW_KEY_R && action == GLFW_PRESS) {
-        renderMode = 0;
+        options.renderMode = FORWARD;
     }
     if(key == GLFW_KEY_T && action == GLFW_PRESS) {
-        renderMode = 1;
+        options.renderMode = DEFERRED;
     }
 }
 

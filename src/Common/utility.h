@@ -7,9 +7,15 @@
 
 typedef struct {
     char showFPS;
-    char render;
+    char renderLights;
+    enum RenderMode{
+        DEFERRED,
+        FORWARD,
+    } renderMode;
     int width;
     int height;
+    int lightCount;
+    int gameObjectCount;
 } Options;
 Options options = {};
 

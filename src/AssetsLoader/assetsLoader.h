@@ -2,12 +2,11 @@
 #define ASSETS_LOADER
 
 #include <cglm/cglm.h>
-#include <cglm/vec3.h>
-#include <glad/glad.h>
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "../Shader/shader.h"
 #include "../Common/objects.h"
 #include "../Model/model.h"
 #include "../Common/utility.h"
@@ -45,18 +44,18 @@ GameObject* g_lightRenderer;
 Light* g_lights;
 GLuint g_lightsBuffer;
 
-GLuint gbuffer, gbuffer_tex[3];
+GLuint gbuffer, gbuffer_tex[4];
 GLuint fbo, fbo_texture, fbo_depth;
 
 extern GLFWwindow* g_window;
 // TODO: this is bad so refactor the defines. Not flexable
-#define MODEL_COUNT     2
+#define MODEL_COUNT     1
 #define SHADER_COUNT    6
 #define MATERIAL_COUNT 23
-#define LIGHT_COUNT 2 
+#define LIGHT_COUNT 100 
 #define OBJECT_COUNT    4 
 
-#define GAME_OBJECT_COUNT 3 
+#define GAME_OBJECT_COUNT 100 
 
 enum ObjectType {
     CUBE = 0,
@@ -67,25 +66,29 @@ enum ObjectType {
 enum ModelType {
     BACKPACK = OBJECT_COUNT,
     DRAGON,
+    NINJA,
 };
 enum MetarialType {
     BRONZE
 };
-// <----- todo end
 
 
 void loadFramebuffers();
-void shadersSetup();
-void gameObjectsSetup();
+void loadGameObjects();
 void loadAssets();
-void materialSetup();
 void loadMaterialValues();
+void loadShaders();
+void loadMaterials();
+
+void sceneSetup();
+
 void parseMaterials(Material* material);
 void checkFramebuffer(GLenum status);
 
 void cleanGameObjects();
 void cleanAssets();
 void cleanMaterial();
+void cleanLights();
 void cleanShaders();
 void deleteBuffers();
 
@@ -100,7 +103,7 @@ enum Shaders{
 };
 
 GLuint debug_texture;
-void shadersSetup() {
+void loadShaders() {
     g_shaders = malloc(sizeof(GLuint) * SHADER_COUNT);
     char pathes[2][64] = {
         "NULL",
@@ -125,16 +128,16 @@ void shadersSetup() {
     g_cubeShader = createProgram(pathes, 2);
 
     // debug
-    strncpy(pathes[0], "Shaders/Debug/GBuffer.vert", 64);
-    strncpy(pathes[1], "Shaders/Debug/GBuffer.frag", 64);
+    strncpy(pathes[0], "Shaders/GBuffer/GBuffer.vert", 64);
+    strncpy(pathes[1], "Shaders/GBuffer/GBuffer.frag", 64);
     gbufferShader = createProgram(pathes, 2);
     
-    strncpy(pathes[0], "Shaders/Debug/GBufferRender.vert", 64);
-    strncpy(pathes[1], "Shaders/Debug/GBufferShow.frag", 64);
+    strncpy(pathes[0], "Shaders/GBuffer/GBufferRender.vert", 64);
+    strncpy(pathes[1], "Shaders/GBuffer/GBufferShow.frag", 64);
     gbufferShowShader = createProgram(pathes, 2);
     
-    strncpy(pathes[0], "Shaders/Debug/GBufferRender.vert", 64);
-    strncpy(pathes[1], "Shaders/Debug/GBufferRender.frag", 64);
+    strncpy(pathes[0], "Shaders/GBuffer/GBufferRender.vert", 64);
+    strncpy(pathes[1], "Shaders/GBuffer/GBufferRender.frag", 64);
     gbufferRenderShader = createProgram(pathes, 2);
 
     strncpy(pathes[0], "Shaders/GBuffer/GBufferRender.vert", 64);
@@ -169,8 +172,8 @@ void loadFramebuffers() {
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, fbo_texture, 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, fbo_depth, 0);
 
-    static const GLenum draw_buffer[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-    glDrawBuffers(1, draw_buffer);
+    static const GLenum fbo_draw_buffer[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(1, fbo_draw_buffer);
 
     framebufferStatus = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
     if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE) {
@@ -186,7 +189,7 @@ void loadFramebuffers() {
     glGenFramebuffers(1, &gbuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, gbuffer);
 
-    glGenTextures(3, gbuffer_tex);
+    glGenTextures(4, gbuffer_tex);
     glBindTexture(GL_TEXTURE_2D, gbuffer_tex[0]);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32UI, width, height);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -196,17 +199,24 @@ void loadFramebuffers() {
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, width, height);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     glBindTexture(GL_TEXTURE_2D, gbuffer_tex[2]);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_R8UI, width, height);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glBindTexture(GL_TEXTURE_2D, gbuffer_tex[3]);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT32F, width, height);
 
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, gbuffer_tex[0], 0);
     glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, gbuffer_tex[1], 0);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gbuffer_tex[2], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, gbuffer_tex[2], 0);
+    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, gbuffer_tex[3], 0);
 
-    glDrawBuffers(2, draw_buffer);
+    static const GLenum draw_buffer[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
+    glDrawBuffers(3, draw_buffer);
 
     framebufferStatus = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
     if (framebufferStatus != GL_FRAMEBUFFER_COMPLETE) {
@@ -216,59 +226,48 @@ void loadFramebuffers() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
  }
 
-void gameObjectsSetup() {
+void loadGameObjects() {
     g_gameObjects = malloc(sizeof(GameObject) * GAME_OBJECT_COUNT);
     if (!g_gameObjects) {
         fprintf(stderr, "ERROR: coudn't locate memory for gameObjects\n");
     }
+}
+void sceneSetup() {
+    int boxSize = ceil(sqrt(options.gameObjectCount));
+    int gap = 2;
+    float offsetX = (boxSize - 1) * gap * 0.5f;
+    for (int i = 0; i < GAME_OBJECT_COUNT; i++) {
+        GameObject* gameObject = &g_gameObjects[i];
+        gameObject->type = BACKPACK;
+        gameObject->shaderProgram = g_shaders[0];
 
-    int i = 0;
-    GameObject* gameObject = &g_gameObjects[i];
-    gameObject->type = BACKPACK;
-    gameObject->shaderProgram = g_shaders[0];
-    gameObject->position[0] = 0;
-    gameObject->position[1] = 0;
-    gameObject->position[2] = -5;
+        gameObject->position[0] = (i % boxSize) * gap - offsetX;
+        gameObject->position[1] = 0;
+        gameObject->position[2] = -(i / boxSize) * gap;;
 
-    gameObject->rotation[0] = 0;
-    gameObject->rotation[1] = 0;
-    gameObject->rotation[2] = 0;
+        gameObject->rotation[0] = 0;
+        gameObject->rotation[1] = 0;
+        gameObject->rotation[2] = 0;
 
-    gameObject->scale[0] = 0.6;
-    gameObject->scale[1] = 0.6;
-    gameObject->scale[2] = 0.6;
-    i++;
-
-    for (int i = 1; i < GAME_OBJECT_COUNT; i++) {
-        memcpy(&g_gameObjects[i], &g_gameObjects[0], sizeof(GameObject));
-        g_gameObjects[i].position[0] = i * 2;
-    }
-
-    g_lightRenderer = malloc(sizeof(GameObject) * LIGHT_COUNT);
-    if (!g_lightRenderer) {
-        fprintf(stderr, "ERROR: coudn't locate memory for light renderer\n");
-    }
-    for (i = 0; i < LIGHT_COUNT; i++) {
-        Light* light = &g_lights[i];
-        gameObject = &g_lightRenderer[i];
-        gameObject->type = CUBE;
-        glm_vec3_copy(light->position, gameObject->position);
-        gameObject->shaderProgram = g_shaders[2];
-        glm_vec3_copy(GLM_VEC3_ZERO, gameObject->rotation);
-        glm_vec3_copy(GLM_VEC3_ONE, gameObject->scale);
+        gameObject->scale[0] = 0.6;
+        gameObject->scale[1] = 0.6;
+        gameObject->scale[2] = 0.6;
     }
 }
 
 void loadAssets() {
     g_models = malloc(sizeof(Model) * MODEL_COUNT);
     loadModel(&g_models[0], "Assets/Backpack/backpack.obj", "Assets/Backpack/");
-    loadModel(&g_models[1], "Assets/stanford_dragon_pbr/dragon.glb", "Assets/stanford_dragon_pbr/textures/");
+    //loadModel(&g_models[1], "Assets/stanford_dragon_pbr/dragon.glb", "Assets/stanford_dragon_pbr/textures/");
+    //loadModel(&g_models[2], "Assets/Ninja/Ninja.fbx", "Assets/Ninja/");
+    
     // load objects
     objectsInit();
     g_objects = malloc(sizeof(Object) * OBJECT_COUNT);
     if (g_objects == NULL) {
         fprintf(stderr, "ERROR: coudn't allocate memory for materials!\n");
     }
+
     g_objects[0].vao = cubeVAO;
     g_objects[0].vbo = cubeVBO;
     g_objects[0].ebo = 0;
@@ -290,7 +289,7 @@ void loadAssets() {
     g_objects[3].count = 36;
 }
 
-void materialSetup() {
+void loadMaterials() {
     g_materials = malloc(sizeof(Material) * MATERIAL_COUNT);
 
     if (g_materials == NULL) {
@@ -343,39 +342,55 @@ void lightsSetup() {
     if (g_lights == NULL) {
         fprintf(stderr, "ERROR: coudn't allocate memory for lights!\n");
     }
-    Light* light = &g_lights[0];
-    light->position[0] = 0; 
-    light->position[1] = 0; 
-    light->position[2] = 4; 
-    light->ambient[0] = 0.1f; 
-    light->ambient[1] = 0.1f; 
-    light->ambient[2] = 0.1f; 
-    light->diffuse[0] = 0.8f; 
-    light->diffuse[1] = 0.8f; 
-    light->diffuse[2] = 0.8f; 
-    light->specular[0] = 1; 
-    light->specular[1] = 1; 
-    light->specular[2] = 1; 
 
-    light = &g_lights[1];
-    light->position[0] = 0; 
-    light->position[1] = -3; 
-    light->position[2] = -9; 
-    light->ambient[0] = 0.2f; 
-    light->ambient[1] = 0; 
-    light->ambient[2] = 0; 
-    light->diffuse[0] = 0.15f; 
-    light->diffuse[1] = 0.31f; 
-    light->diffuse[2] = 0.6f; 
-    light->specular[0] = 1; 
-    light->specular[1] = 1; 
-    light->specular[2] = 1; 
-    
+    g_lightRenderer = malloc(sizeof(GameObject) * LIGHT_COUNT);
+    if (g_lightRenderer == NULL) {
+        fprintf(stderr, "ERROR: coudn't locate memory for light renderer\n");
+    }
+
+    int boxSize = ceil(sqrt(LIGHT_COUNT));
+    int gap = 2;
+    float offsetX = (boxSize - 1) * gap * 0.5f;
+
+    for (int i = 0; i < LIGHT_COUNT; i++) {
+        Light* light = &g_lights[i];
+
+        light->position[0] = (i % boxSize) * gap - offsetX;
+        light->position[1] = 3;
+        light->position[2] = -(i / boxSize) * gap;;
+        light->position[3] = 0;
+
+        light->ambient[0] = 0.1f; 
+        light->ambient[1] = 0.1f; 
+        light->ambient[2] = 0.1f; 
+        light->ambient[3] = 0; 
+
+        light->diffuse[0] = 0.5f; 
+        light->diffuse[1] = 0.5f; 
+        light->diffuse[2] = 0.5f; 
+        light->diffuse[3] = 0; 
+
+        light->specular[0] = 1; 
+        light->specular[1] = 1; 
+        light->specular[2] = 1; 
+        light->specular[3] = 0; 
+    }
+
+    for (int i = 0; i < LIGHT_COUNT; i++) {
+        Light* light = &g_lights[i];
+        GameObject* gameObject = &g_lightRenderer[i];
+        gameObject->type = CUBE;
+        glm_vec3_copy(light->position, gameObject->position);
+        gameObject->shaderProgram = g_shaders[SHADER_LIGHT_SOURCE];
+        glm_vec3_copy(GLM_VEC3_ZERO, gameObject->rotation);
+        glm_vec3_copy(GLM_VEC3_ONE, gameObject->scale);
+    }
     // light ssbo
     glGenBuffers(1, &g_lightsBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_lightsBuffer);
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(Light) * LIGHT_COUNT, g_lights, GL_STATIC_DRAW);
 }
+
 void checkFramebuffer(GLenum status) {
     switch (status) {
         case GL_FRAMEBUFFER_UNDEFINED:
@@ -412,14 +427,15 @@ void cleanAssets() {
         deleteModel(&g_models[i]);
     }
     free(g_models);
-    free(g_lightRenderer);
-    free(g_lights);
     free(g_objects);
     objectsDelete();
 }
 void cleanMaterial() {
-
     free(g_materials);
+}
+void cleanLights() {
+    free(g_lights);
+    free(g_lightRenderer);
 }
 void cleanShaders() {
     for (int i = 0; i < SHADER_COUNT; i++) {

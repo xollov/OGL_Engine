@@ -18,7 +18,7 @@ typedef struct {
 Camera g_camera;
 void cameraMove(GLFWwindow* window, Camera* camera, float deltaTime) {
 
-    camera->speed = 250 * deltaTime;
+    camera->speed = 1500 * deltaTime;
     if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         vec3 temp;
         glm_vec3_copy(camera->front, temp);
@@ -98,11 +98,11 @@ void cameraRotate(Camera *camera, double xpos, double ypos) {
 
 void cameraSetup() {
     g_camera.position[0] = 0;
-    g_camera.position[1] = 0;
-    g_camera.position[2] = 0;
+    g_camera.position[1] = 5;
+    g_camera.position[2] = 5;
 
     g_camera.front[0] =  0;
-    g_camera.front[1] =  0;
+    g_camera.front[1] =  -0.45;
     g_camera.front[2] = -1;
     
     g_camera.up[0] = 0;

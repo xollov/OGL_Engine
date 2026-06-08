@@ -1,4 +1,5 @@
 #include "model.h"
+#include "../Shader/shader.h"
 #include <assimp/material.h>
 
 #define MAX_TEXTURES 100
@@ -188,8 +189,10 @@ void loadModel(Model* model, const char* modelPath, const char* absolutePath) {
         // fill textures
         Texture* textures = mesh->textures;
         struct aiMaterial* mat;
+
         if (m->mMaterialIndex >= 0 
             && m->mMaterialIndex < scene->mNumMaterials) {
+
             mat = scene->mMaterials[m->mMaterialIndex];
         }
         if (NULL != mat) {
@@ -201,7 +204,6 @@ void loadModel(Model* model, const char* modelPath, const char* absolutePath) {
                 mesh->texturesSize += aiGetMaterialTextureCount(mat, type); 
             }
         }
-        
 
         // update offsets 
         vertexOffset  += mesh->verticesSize * sizeof(Vertex);
@@ -215,31 +217,21 @@ void loadModel(Model* model, const char* modelPath, const char* absolutePath) {
 
     aiReleaseImport(scene);
 }
-void drawModel(Model* model, GLuint shader) {
+void drawModel(Model* model) {
 
     for (int i = 0; i < model->meshesSize; i++) {
-        drawMesh(&model->meshes[i], shader);
+        drawMesh(&model->meshes[i]);
     }
 }
 
-extern GLuint g_textures[3];
-void drawMesh(Mesh* mesh, GLuint shader) {
-    
-    // textures
-    /*
-     * May cause a bug
-    static int previousCount = 0;
-    for (int i = 0; i < previousCount; i++) {
-        glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, 0);
-    }
-    unsigned int textureNr[2] = {1,1};
-    previousCount = mesh->texturesSize;
+void drawMesh(Mesh* mesh) {
+
+/*
     for (int i = 0; i < mesh->texturesSize; i++) {
-        glActiveTexture(GL_TEXTURE0 + i);
-        glBindTexture(GL_TEXTURE_2D, g_textures[i]);
+        glActiveTexture(GL_TEXTURE0 + i);      
+        glBindTexture(GL_TEXTURE_2D, mesh->textures[i].id);
     }
-    */
+*/
     glBindVertexArray(mesh->VAO);
     glDrawElements(GL_TRIANGLES, mesh->indicesSize, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);

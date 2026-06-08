@@ -2,6 +2,7 @@
 
 layout (location = 0) out uvec4 out_color0;
 layout (location = 1) out vec4 out_color1;
+layout (location = 2) out uint out_color2;
 
 in VERT {
     vec3 ws;
@@ -10,6 +11,7 @@ in VERT {
 } fs_in;
 
 uniform sampler2D diffuse;
+uniform uint matID;
 
 void main(void) {
 
@@ -21,5 +23,6 @@ void main(void) {
 
     out_color0 = color0; 
     out_color1 = texture(diffuse, fs_in.tex);
+    out_color2 = matID; 
 }
 

@@ -23,7 +23,6 @@ layout (binding = 1, std430) buffer light_buffer {
 uniform sampler2D diffuseMap;
 uniform sampler2D specularMap;
 
-
 in VERT {
     vec3 position;
     vec3 normal;
@@ -36,26 +35,26 @@ uniform uint lightCount;
 
 vec3 calculateLight(int id) {
 
-    Material material = materials[10];
+    Material material = materials[matID];
     Light light = lights[id];
     //ambient color
-    vec3 ambient = light.ambient.rgb * texture(diffuseMap, fs_in.tex).rgb;
+    vec3 ambient = light.ambient.rgb * material.diffuse.rgb * texture(diffuseMap, fs_in.tex).rgb;
 
     vec3 normal = normalize(fs_in.normal);
-    //vec3 normal = texture(normalMap, fs_in.tex).rgb;
-    //normal = normalize(normal);
 
     // diffuse color
     vec3 lightDir = normalize(light.position.xyz - fs_in.position);
     float diff = max(dot(normal, lightDir), 0.0f); 
-    vec3 diffuse = light.diffuse.rgb * diff * texture(diffuseMap, fs_in.tex).rgb;
+    vec3 diffuse = light.diffuse.rgb * diff * material.diffuse.rgb * texture(diffuseMap, fs_in.tex).rgb;
 
-    // specular color
+    // spec
     vec3 viewDir = normalize(viewPosition - fs_in.position);
     vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow( max(dot(viewDir, reflectDir), 0.0f), material.shininess);
-    //vec3 specular = light.specular.rgb * spec * texture(specularMap, fs_in.tex).rgb;
-    vec3 specular = light.specular.rgb * spec * material.shininess;
+    // TODO: figure out why it breaks
+    //float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess); //breaks
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+    vec3 specular = light.specular.rgb * material.specular.rgb * spec ;
+
     return ambient + diffuse + specular;
 }
 
@@ -63,7 +62,7 @@ out vec4 Color;
 void main(void) {
 
     vec3 color = vec3(0);
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < lightCount; i++) {
         color += calculateLight(i);
     }
     Color = vec4(color, 1);

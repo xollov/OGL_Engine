@@ -19,5 +19,5 @@ void main(void) {
     vs_out.normal = mat3(transpose(inverse(model))) * norm;
     vs_out.tex = tex;
 
-    gl_Position = vp * model * vec4(pos, 1.0);;
+    gl_Position = vp * model * vec4(pos, 1.0);
 }
