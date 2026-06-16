@@ -3,7 +3,7 @@
 struct Material {
     vec4 diffuse;
     vec4 specular;
-    float shininess;
+    uint shininess;
 };
 layout (binding = 0, std430) buffer material_buffer {
     Material materials[];

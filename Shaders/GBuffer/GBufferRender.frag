@@ -15,7 +15,7 @@ struct frag_info {
 struct Material {
     vec4 diffuse;
     vec4 specular;
-    float shininess;
+    uint shininess;
 };
 
 layout (binding = 0, std430) buffer material_buffer {
@@ -77,9 +77,9 @@ vec4 calculateLighting() {
         // specular color
         vec3 viewDir = normalize(viewPosition - info.ws);
         vec3 reflectDir = reflect(-lightDir, normal);
-        float spec = pow( max(dot(viewDir, reflectDir), 0.0f), 32);
+        float spec = pow( max(dot(viewDir, reflectDir), 0.0f), material.shininess);
         // TODO: specular map impl?
-        // vec3 specular = light.specular.rgb * spec * texture(specularMap, texCoord).rgb;
+        // vec3 specular = light.specular.rgb * spec * texture(specularMap, info.tex).rgb;
         vec3 specular = light.specular.rgb * material.specular.rgb * spec;
         result += ambient + diffuse + specular;
     }
@@ -87,7 +87,6 @@ vec4 calculateLighting() {
     return vec4(result, 1.0f);
 }
 
-in vec2 texCoord;
 out vec4 color_out;
 void main(void)
 {

@@ -3,7 +3,7 @@
 struct Material {
     vec4 diffuse;
     vec4 specular;
-    float shininess;
+    uint shininess;
 };
 layout (binding = 0, std430) buffer material_buffer {
     Material materials[];
@@ -50,9 +50,7 @@ vec3 calculateLight(int id) {
     // spec
     vec3 viewDir = normalize(viewPosition - fs_in.position);
     vec3 reflectDir = reflect(-lightDir, normal);
-    // TODO: figure out why it breaks
-    //float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess); //breaks
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     vec3 specular = light.specular.rgb * material.specular.rgb * spec ;
 
     return ambient + diffuse + specular;

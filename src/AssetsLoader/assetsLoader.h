@@ -24,7 +24,7 @@ typedef struct {
 
 typedef struct {
     vec4 diffuse, specular;
-    float shininess;
+    unsigned int shininess;
 }Material;
 
 typedef struct {
@@ -330,7 +330,7 @@ void loadMaterialValues() {
         mat->specular[0] =  v[6]; 
         mat->specular[1] =  v[7]; 
         mat->specular[2] =  v[8]; 
-        mat->shininess =  v[9]; 
+        mat->shininess =  v[9] * 128; 
         //printf("%d.%s %f %f %f %f %f %f %f\n", i, name, mat->diffuse[0], mat->diffuse[1], mat->diffuse[2], mat->specular[0], mat->specular[1], mat->specular[2], mat->shininess);
         i++;
     }
