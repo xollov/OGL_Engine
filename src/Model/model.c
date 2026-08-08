@@ -2,8 +2,8 @@
 #include "../Shader/shader.h"
 #include <assimp/material.h>
 
-#define MAX_TEXTURES 100
-static Texture loaded_textures[MAX_TEXTURES];
+#define MAX_LOADED_TEXTURES 100
+static Texture loaded_textures[MAX_LOADED_TEXTURES];
 static int loadedTexturesCount = 0;
 static const char textureTypeNames[2][10] = {"diffuse", "specular"};
 
@@ -35,8 +35,8 @@ void loadMaterialTextures(struct aiMaterial* mat, enum aiTextureType type, Textu
 
             texture[(*textureCount)++] = tex;
             loaded_textures[loadedTexturesCount++] = tex;
-            if (loadedTexturesCount >=  MAX_TEXTURES) {
-               printf("EXCIDED MAXIMUM TEXTURE COUNT!!!!!!\n"); 
+            if (loadedTexturesCount >=  MAX_LOADED_TEXTURES) {
+                fprintf(stderr, "Maximum number of loaded textures exceeded.\n");
                loadedTexturesCount--; 
             }
         }
