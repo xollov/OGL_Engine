@@ -15,7 +15,7 @@ void loadMaterialTextures(struct aiMaterial* mat, enum aiTextureType type, Textu
         struct aiString str; 
         aiGetMaterialTexture(mat, type, i, &str, NULL,NULL,NULL,NULL,NULL,NULL);
         int skip = 0;
-        for (int j = 0; j < MAX_TEXTURES; j++) {
+        for (int j = 0; j < loadedTexturesCount; j++) {
             if (strncmp(loaded_textures[j].path, str.data, str.length) == 0) {
                 skip = 1;
                 texture[*textureCount] = loaded_textures[j];
@@ -69,6 +69,14 @@ void setupMesh(Mesh* mesh) {
 }
 
 // API model.h
+/*
+ * Single allocation layout:
+ *
+ * [ Mesh array ]
+ * [ Vertex arrays ]
+ * [ Index arrays ]
+ * [ Texture arrays ]
+ */
 void loadModel(Model* model, const char* modelPath, const char* absolutePath) {
     
     strcpy(assetPath, absolutePath);
@@ -107,6 +115,7 @@ void loadModel(Model* model, const char* modelPath, const char* absolutePath) {
             modelSize += m->mFaces[i].mNumIndices * sizeof(unsigned int);
             if (m->mFaces[i].mNumIndices != 3) {
                 printf("Indices are not 3!!\n");
+                goto cleanup;
             }
         }
     }
@@ -115,17 +124,15 @@ void loadModel(Model* model, const char* modelPath, const char* absolutePath) {
     textureOffset = modelSize;
     for (int i = 0; i < scene->mNumMeshes; i++) {
         int textureCount = 0;
-        struct aiMaterial* mat;
+        struct aiMaterial* mat = NULL;
 
         struct aiMesh* m = scene->mMeshes[i];
-        if (m->mMaterialIndex >= 0 && m->mMaterialIndex < scene->mNumMaterials) {
+        if (m->mMaterialIndex < scene->mNumMaterials) {
             mat = scene->mMaterials[m->mMaterialIndex];
             for (int type = 1; type < MAX_TEXTURES_TYPES; type++) {
                 textureCount += aiGetMaterialTextureCount(mat, type); 
             }
-        } else {
-            mat = NULL;
-        }
+        } 
         modelSize += textureCount * sizeof(Texture);
     }
     printf("size of model is: %d\n", modelSize);
@@ -134,6 +141,7 @@ void loadModel(Model* model, const char* modelPath, const char* absolutePath) {
 
     if (NULL == model->meshes) {
         printf("ERROR: Coudn't allocate %d bytes of memory for model %s.\n", modelSize, modelPath);
+        goto cleanup;
 
     }
     model->meshesSize = scene->mNumMeshes;
@@ -215,6 +223,7 @@ void loadModel(Model* model, const char* modelPath, const char* absolutePath) {
         setupMesh(&model->meshes[i]); 
     }
 
+cleanup:
     aiReleaseImport(scene);
 }
 void drawModel(Model* model) {
@@ -225,13 +234,6 @@ void drawModel(Model* model) {
 }
 
 void drawMesh(Mesh* mesh) {
-
-/*
-    for (int i = 0; i < mesh->texturesSize; i++) {
-        glActiveTexture(GL_TEXTURE0 + i);      
-        glBindTexture(GL_TEXTURE_2D, mesh->textures[i].id);
-    }
-*/
     glBindVertexArray(mesh->VAO);
     glDrawElements(GL_TRIANGLES, mesh->indicesSize, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
