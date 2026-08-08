@@ -26,20 +26,11 @@ void applyMVP(GameObject* gameObject);
 extern GLuint vis_mode;
 
 void render() {
-    GLuint query;
-    glGenQueries(1, &query);
-    glBeginQuery(GL_TIME_ELAPSED, query);
-
     if (options.renderMode == FORWARD) {
         drawForwardScene();
     } else {
         drawGBufferScene();
     }
-
-    glEndQuery(GL_TIME_ELAPSED);
-    GLuint64 time;
-    glGetQueryObjectui64v(query, GL_QUERY_RESULT, &time);
-    //printf("Time taken: %lu\n", time);
 }
 
 void drawGBufferScene() {
