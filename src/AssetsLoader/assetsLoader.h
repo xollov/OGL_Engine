@@ -105,44 +105,44 @@ enum Shaders{
 GLuint debug_texture;
 void loadShaders() {
     g_shaders = malloc(sizeof(GLuint) * SHADER_COUNT);
-    char pathes[2][64] = {
+    char paths[2][64] = {
         "NULL",
         "NULL",
     };
 
-    strncpy(pathes[0], "Shaders/Material/Material.vert", 64);
-    strncpy(pathes[1], "Shaders/Material/Material.frag", 64);
-    g_shaders[SHADER_MATERIAL] = createProgram(pathes, 2);
+    strncpy(paths[0], "Shaders/Material/Material.vert", 64);
+    strncpy(paths[1], "Shaders/Material/Material.frag", 64);
+    g_shaders[SHADER_MATERIAL] = createProgram(paths, 2);
 
-    strncpy(pathes[0], "Shaders/Model/Model.vert", 64);
-    strncpy(pathes[1], "Shaders/Model/Model.frag", 64);
-    g_shaders[SHADER_MODEL] = createProgram(pathes, 2);
+    strncpy(paths[0], "Shaders/Model/Model.vert", 64);
+    strncpy(paths[1], "Shaders/Model/Model.frag", 64);
+    g_shaders[SHADER_MODEL] = createProgram(paths, 2);
 
-    strncpy(pathes[0], "Shaders/LightSource/LightSource.vert", 64);
-    strncpy(pathes[1], "Shaders/LightSource/LightSource.frag", 64);
-    g_shaders[SHADER_LIGHT_SOURCE] = createProgram(pathes, 2);
+    strncpy(paths[0], "Shaders/LightSource/LightSource.vert", 64);
+    strncpy(paths[1], "Shaders/LightSource/LightSource.frag", 64);
+    g_shaders[SHADER_LIGHT_SOURCE] = createProgram(paths, 2);
 
 
-    strncpy(pathes[0], "Shaders/Cube/Cube.vert", 64);
-    strncpy(pathes[1], "Shaders/Cube/Cube.frag", 64);
-    g_cubeShader = createProgram(pathes, 2);
+    strncpy(paths[0], "Shaders/Cube/Cube.vert", 64);
+    strncpy(paths[1], "Shaders/Cube/Cube.frag", 64);
+    g_cubeShader = createProgram(paths, 2);
 
     // debug
-    strncpy(pathes[0], "Shaders/GBuffer/GBuffer.vert", 64);
-    strncpy(pathes[1], "Shaders/GBuffer/GBuffer.frag", 64);
-    gbufferShader = createProgram(pathes, 2);
+    strncpy(paths[0], "Shaders/GBuffer/GBuffer.vert", 64);
+    strncpy(paths[1], "Shaders/GBuffer/GBuffer.frag", 64);
+    gbufferShader = createProgram(paths, 2);
     
-    strncpy(pathes[0], "Shaders/GBuffer/GBufferRender.vert", 64);
-    strncpy(pathes[1], "Shaders/GBuffer/GBufferShow.frag", 64);
-    gbufferShowShader = createProgram(pathes, 2);
+    strncpy(paths[0], "Shaders/GBuffer/GBufferRender.vert", 64);
+    strncpy(paths[1], "Shaders/GBuffer/GBufferShow.frag", 64);
+    gbufferShowShader = createProgram(paths, 2);
     
-    strncpy(pathes[0], "Shaders/GBuffer/GBufferRender.vert", 64);
-    strncpy(pathes[1], "Shaders/GBuffer/GBufferRender.frag", 64);
-    gbufferRenderShader = createProgram(pathes, 2);
+    strncpy(paths[0], "Shaders/GBuffer/GBufferRender.vert", 64);
+    strncpy(paths[1], "Shaders/GBuffer/GBufferRender.frag", 64);
+    gbufferRenderShader = createProgram(paths, 2);
 
-    strncpy(pathes[0], "Shaders/GBuffer/GBufferRender.vert", 64);
-    strncpy(pathes[1], "Shaders/FramebufferShow.frag", 64);
-    fboShader = createProgram(pathes, 2);
+    strncpy(paths[0], "Shaders/GBuffer/GBufferRender.vert", 64);
+    strncpy(paths[1], "Shaders/FramebufferShow.frag", 64);
+    fboShader = createProgram(paths, 2);
 
     // textures
     g_textures[0] = loadTexture("Assets/Backpack/diffuse.jpg");
