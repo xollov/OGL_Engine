@@ -96,9 +96,9 @@ void drawGBufferScene() {
     // render lights
     if (options.renderLights) {
         for (int i = 0; i < options.lightCount; i++) {
-            GameObject light = g_lightRenderer[i];
-            glUseProgram(light.shaderProgram);
-            renderGameObject(&light);
+            GameObject *light = &g_lightRenderer[i];
+            glUseProgram(light->shaderProgram);
+            renderGameObject(light);
         }
     }
     // clean attachment
@@ -148,9 +148,9 @@ void drawForwardScene() {
     // render lights
     if (options.renderLights) {
         for (int i = 0; i < options.lightCount; i++) {
-            GameObject light = g_lightRenderer[i];
-            glUseProgram(light.shaderProgram);
-            renderGameObject(&light);
+            GameObject *light = &g_lightRenderer[i];
+            glUseProgram(light->shaderProgram);
+            renderGameObject(light);
         }
     }
     // clean attachment
@@ -170,8 +170,8 @@ void renderGameObject(GameObject* gameObject) {
 }
 void renderModel(GameObject* gameObject) {
     applyMVP(gameObject);
-    Model model = g_models[gameObject->type - BACKPACK];
-    drawModel(&model);
+    Model* model = &g_models[gameObject->type - BACKPACK];
+    drawModel(model);
 }
 void renderObject(GameObject* gameObject) {
     applyMVP(gameObject);
@@ -218,6 +218,6 @@ void update() {
     }
 
     cameraMove(g_window, &g_camera, deltaTime);
-    lastFrame = glfwGetTime();
+    lastFrame = currentTime;
 }
 #endif // RENDER

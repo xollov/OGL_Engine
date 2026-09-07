@@ -4,11 +4,11 @@
 CC="gcc"
 
 # Flags as an array
-FLAGS=(-Wall -std=c11)
+FLAGS=(-Wall -Wextra -std=c11)
 LIBS=(-lglfw -lGL -lm -lassimp)
 
 # Source files
-SRCS=(src/main.c vendor/glad/glad.c src/Shader/shader.c src/Model/model.c src/Common/objects.c)
+SRCS=(src/main.c vendor/glad/glad.c src/Shader/shader.c src/Model/model.c src/Common/objects.c src/Common/utility.c src/AssetsLoader/assetLoader.c src/AssetsLoader/sceneSetup.c)
 
 # Output binary
 TARGET="a.exe"
