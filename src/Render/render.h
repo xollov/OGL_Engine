@@ -36,7 +36,7 @@ void drawGBufferScene() {
     const GLfloat one[] = {1, 1, 1, 1};
     int width, height;
     int id;
-    glfwGetWindowSize(g_window, &width, &height);
+    glfwGetFramebufferSize(g_window, &width, &height);
 
     // first pass
     glBindFramebuffer(GL_FRAMEBUFFER, gbuffer);
@@ -116,8 +116,9 @@ void drawForwardScene() {
     const GLfloat one[] = {1, 1, 1, 1};
     int width, height;
     int id;
-    glfwGetWindowSize(g_window, &width, &height);
+    glfwGetFramebufferSize(g_window, &width, &height);
 
+    //printf("Window size: %d x %d\n", width, height);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0,0, width, height);
     glEnable(GL_DEPTH_TEST); 
@@ -128,9 +129,9 @@ void drawForwardScene() {
     glUseProgram(program);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, g_textures[0]);
+    //glBindTexture(GL_TEXTURE_2D, g_textures[0]);
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, g_textures[1]);
+    //glBindTexture(GL_TEXTURE_2D, g_textures[1]);
 
     // uniforms
     glUniform1ui(glGetUniformLocation(program, "lightCount"), options.lightCount);
@@ -161,6 +162,7 @@ void drawForwardScene() {
 }
 
 void renderGameObject(GameObject* gameObject) {
+    applyMVP(gameObject);
     if (gameObject->type >= BACKPACK) {
         renderModel(gameObject);
     }
@@ -169,12 +171,10 @@ void renderGameObject(GameObject* gameObject) {
     }
 }
 void renderModel(GameObject* gameObject) {
-    applyMVP(gameObject);
     Model* model = &g_models[gameObject->type - BACKPACK];
     drawModel(model);
 }
 void renderObject(GameObject* gameObject) {
-    applyMVP(gameObject);
     Object obj = g_objects[gameObject->type];
     glBindVertexArray(obj.vao);
     glDrawArrays(GL_TRIANGLES, 0, obj.count);

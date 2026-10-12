@@ -92,10 +92,10 @@ GLuint createShader(const char* path, GLenum type) {
 }
 unsigned int loadTexture(const char* path) {
 
-    unsigned int texture;
+    unsigned int texture = 0;
     glGenTextures(1, &texture);
 
-    int width, height, nrchannels;
+    int width = 0, height = 0, nrchannels = 0;
     unsigned char *data = stbi_load(path, &width, &height, &nrchannels, 0);
     if (data)
     {
@@ -123,7 +123,7 @@ unsigned int loadTexture(const char* path) {
         //printf("Texture loaded: %s, texID: %d, components: %d\n", path, texture, nrchannels);
     }
     else
-{
+    {
         printf("failed to load texture. %s\n", path);
     }
     glBindTexture(GL_TEXTURE_2D, 0);
